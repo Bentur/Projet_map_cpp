@@ -14,28 +14,20 @@ struct Point{
 	float lon;
 	float lat;
 	float h;
+
+	float x;
+	float y;
 };
 
 vector<Point> points;
 
 
-pair<float, float> Mesure_GPS(float lo, float la){
-    float dd = lo;
-    float mm = lo + dd * 100;
-    float lat = (dd + mm/60) * M_PI/180;
-
-    dd = la; // 100
-    mm = la - dd * 100;
-    float lon = (dd + mm/60) * M_PI/180;
-
-    return make_pair(lon, lat);
-}
-    
-
 pair<float, float> Interpreteur_GPS(float lx, float ly){
-	float ro = 6400000;
+	float ro = 6371000.0;
 	float x = ro*cos(ly)*(lx-lxref);
     float y = ro*(ly-lyref);
+    cout << x << y << endl;
+
     return make_pair(x, y);
 }
     
@@ -51,7 +43,7 @@ int load_map(const string& file_name){
 	while (!ifst.eof()){
 		if(ifst.eof()) break;
 
-		ifst>>lon>>lat>>z;
+		ifst>>lat>>lon>>z;
 		Point p;
 		p.lon = lon;
 		p.lat = lat; 
@@ -67,10 +59,40 @@ int load_map(const string& file_name){
 
 int main(){
 	load_map("map_rascas.txt");
-	lxref,lyref=points.front().lon, points.front().lat;
 
+	//calcul moyenne pour avoir la ref #swag
+	double sum_lat, sum_lon;
+	sum_lat, sum_lon = 0, 0;
+	float x, y, lo, la;
+
+	for (auto i = points.begin(); i != points.end(); ++i){
+		la = i->lat;
+		lo = i->lon;
+
+		sum_lat += la;
+		sum_lon += lo;
+
+		//cout << la << " " << sum_lat << " " << lo << " " << sum_lon << " " << endl;
+
+	}
+	lxref = sum_lat/(float)points.size(); 
+	lyref = sum_lon/(float)points.size();
+
+	cout << points.size() << endl;
 	cout<<lxref<<endl;
 	cout<<lyref<<endl;
+
+	pair<float, float> q;
+	for (auto i = points.begin(); i != points.end(); ++i){
+		la = i->lat;
+		lo = i->lon;
+
+		q = Interpreteur_GPS(la, lo);
+		x = q.first; 
+		y = q.second;
+
+		//cout << la << " " << x << " " << lo << " " << y << " " << endl;
+	}
 	return EXIT_SUCCESS;
 }
 
