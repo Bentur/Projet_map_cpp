@@ -4,6 +4,8 @@
 #include <unistd.h> // pour usleep
 
 #include <vector>
+#include <list>
+
 #include <fstream>
 #include "colormap/palettes.hpp"
 #include "colormap/itadpt/map_iterator_adapter.hpp"
@@ -23,8 +25,7 @@ struct Point{
 };
 
 vector<Point> points;
-
-
+ 
 pair<float, float> Interpreteur_GPS(float lx, float ly){
 	float ro = 6371000.0;
 	float x = ro*cos(ly)*(lx-lxref);
@@ -88,7 +89,7 @@ bool write_PPM(const string& filename){
     //header du cul
     bool binary = false;
 
-    int size = points.size()/1000;
+    unsigned int size = points.size()/1000;
 
     file << "P";
     short h = binary ? 6 : 3;
@@ -117,30 +118,108 @@ bool write_PPM(const string& filename){
 }
 
 void maillage_de_ses_morts(){
-	float maille_x = 1; //il n'y a que maille qui m'aie
-	float maille_y = 1; //il n'y a que m'ail qui male
+	float maille_x = 100; //il n'y a que maille qui m'aie
+	float maille_y = 100; //il n'y a que m'ail qui male
 
 	//on recherche le max et le min sur x et sur y
-	float x_max, x_min, y_max, y_min;
+	float x_max = 0, x_min = 0, y_max = 0, y_min = 1000000;
+	float h_max = 0, h_min = 100000;
 
 	for (auto i = points.begin(); i != points.end(); ++i){
-		if(i->x < min) x_min = i->x;
-    	else if(i->x > max) x_max = i->x;
-    	else if(i->y < min) y_min = i->y;
-    	else if(i->y > max) y_max = i->y;
+		if(i->x < x_min) x_min = i->x;
+    	else if(i->x > x_max) x_max = i->x;
+    	else if(i->y < y_min) y_min = i->y;
+    	else if(i->y > y_max) y_max = i->y;
+    	else if(i->h > h_max) h_max = i->h;
+    	else if(i->h < h_min) h_min = i->h;
 	}
-	int nb_element_x = (int)(x_max-x_min)/maille_x;
-	list<int> nb_x (nb_element_x, 0); //nombre de points (pour la moyenne)
-	list<int> hauteur (nb_element_x, 0); //coordonnée en x
 
-	//on réaligne les points en position x
-	int x_new;
+	cout << x_max << "|" << x_min << "|" << y_max << "|" << x_max << "|" << endl; 
+
+	//on en déduit le nombre d'éléments selon x et selon y
+	const int nb_element_x = (int)(x_max-x_min)/maille_x;
+	const int nb_element_y = (int)(y_max-y_min)/maille_y;
+
+	cout << nb_element_x << "|"  << nb_element_y << "|" << endl;
+
+	//tableau contenant toutes les pairs de chaque ligne (rangé dans un vecteur)
+	//on fait un pré-tri pour éviter de parcourir toutes les valeurs à chaque fois
+	vector<pair<float, float>> points_y[nb_element_y+1];
+	int y_new;
+
+	//on rempli notre vecteur avec les pairs correspondantes
 	for (auto i = points.begin(); i != points.end(); ++i){
-		x_new = int((i->x-x_min)/maille_x);
-		hauteur[x_new] = (hauteur[x_new]*nb_x[x_new] + i->h)/(nb_x[x_new]+1);
-		nb_x[x_new] +=1;
+		y_new = int((i->y-y_min)/maille_y);
+		//cout  << y_new << "|" << nb_element_y << endl;
+		points_y[y_new].push_back(make_pair(i->x-x_min, i->h));
+		//cout << "salut, chat va ? " << endl;
 	}
-	//de même sur y
+
+	//ouverture du fichier pour l'écriture
+	// get a colormap and rescale it
+    auto pal = palettes.at("plasma").rescale(x_min, x_max);
+  
+
+    //writing the fucking fuck
+    ofstream file(filename,ios::out | ios::binary);
+    //file.open(filename,ios::out | ios::binary);
+
+    if (!file) {
+        cerr << "Cannot open file" << endl;
+        return false;
+    }
+    //header du cul
+    bool binary = false;
+
+    unsigned int size = points.size()/1000;
+
+    file << "P";
+    short h = binary ? 6 : 3;
+    file << h << "\n";
+    file << nb_element_x << " ";
+    file << nb_element_y << "\n";
+    file << "255" << "\n";
+
+	//on parcours notre tableau et on va écrire dans le fichier au fur et à mesure
+	//les valeurs du pixmap
+	unsigned int nb_total_points = 0;
+	for (int i =0; i<nb_element_y+1; i++){
+
+		vector<pair<float, float>> vec = points_y[i];
+		cout << "vec size : " << vec.size() << endl;
+		nb_total_points += vec.size();
+
+		int k = 0;
+		int x_min_local = 0, x_max_local = maille_x;
+
+		while(x_max_local < x_max-x_min){
+			x_min_local = k*maille_x, x_max_local = (k+1)*maille_x;
+			int nb_element = 0;
+			float hauteur = 0;
+			for (unsigned int j = 0; j < vec.size(); j++){
+				
+				pair<float, float> p = vec[j];
+				
+				if(p.first >= x_min_local && p.first < x_max_local){
+					hauteur = (p.second + nb_element*hauteur)/(nb_element+1);
+					nb_element +=1;
+					//cout << "on a trouvé un truc" << endl;
+					vec.erase(vec.begin() + j);
+
+				}
+			}
+			k+=1;
+			  // and use it to map the values to colors
+    		auto pix = itadpt::map(val, pal);
+
+
+		}
+		cout << "_____hauteur calculée : " << i << " " << x_min_local << " " << hauteur << endl;
+
+	}
+	cout << "nombres total de points : " << nb_total_points << endl;
+	cout << x_max << "|" << x_min << "|" << y_max << "|" << x_max << "|" << endl; 
+
 }
 
 
@@ -179,8 +258,10 @@ int main(){
 		i->x = q.first; 
 		i->y = q.second;
 
-		//cout << la << " " << x << " " << lo << " " << y << " " << endl;
+		//cout << la << " " << q.first << " " << lo << " " << q.second << " " << endl;
 	}
+
+	maillage_de_ses_morts();
 
 	write_PPM("map_rascas_ASCII.ppm");
 
