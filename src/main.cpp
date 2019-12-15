@@ -74,7 +74,7 @@ bool write_PPM(const string& filename){
     }
 
     // get a colormap and rescale it
-    auto pal = palettes.at("plasma").rescale(min, max);
+    auto pal = palettes.at("haxby").rescale(min, max);
     // and use it to map the values to colors
     auto pix = itadpt::map(val, pal);
 
@@ -117,9 +117,8 @@ bool write_PPM(const string& filename){
 	return true;
 }
 
-void maillage_de_ses_morts(){
-	float maille_x = 100; //il n'y a que maille qui m'aie
-	float maille_y = 100; //il n'y a que m'ail qui male
+bool maillage_de_ses_morts(const string& filename, int largeur){
+
 
 	//on recherche le max et le min sur x et sur y
 	float x_max = 0, x_min = 0, y_max = 0, y_min = 1000000;
@@ -134,13 +133,20 @@ void maillage_de_ses_morts(){
     	else if(i->h < h_min) h_min = i->h;
 	}
 
-	cout << x_max << "|" << x_min << "|" << y_max << "|" << x_max << "|" << endl; 
+	cout << x_max << "|" << x_min << "|" << y_max << "|" << y_min << "|" << endl; 
 
 	//on en déduit le nombre d'éléments selon x et selon y
-	const int nb_element_x = (int)(x_max-x_min)/maille_x;
-	const int nb_element_y = (int)(y_max-y_min)/maille_y;
+	const int nb_element_x = largeur;
+	//const int nb_element_y = (int)largeur*(y_max-y_min)/(x_max-x_min);
+	const int nb_element_y = largeur*1.1;
 
+	float maille_x = (x_max-x_min)/nb_element_x; //il n'y a que maille qui m'aie
+	float maille_y = (y_max-y_min)/nb_element_y; //il n'y a que m'ail qui male
+
+	
+	cout << (y_max-y_min) << " " << (x_max-x_min) << endl;
 	cout << nb_element_x << "|"  << nb_element_y << "|" << endl;
+	cout << maille_x << " " << maille_y << endl;
 
 	//tableau contenant toutes les pairs de chaque ligne (rangé dans un vecteur)
 	//on fait un pré-tri pour éviter de parcourir toutes les valeurs à chaque fois
@@ -157,21 +163,16 @@ void maillage_de_ses_morts(){
 
 	//ouverture du fichier pour l'écriture
 	// get a colormap and rescale it
-    auto pal = palettes.at("plasma").rescale(x_min, x_max);
+    auto pal = palettes.at("plasma").rescale(h_min, h_max);
   
-
-    //writing the fucking fuck
     ofstream file(filename,ios::out | ios::binary);
-    //file.open(filename,ios::out | ios::binary);
 
     if (!file) {
         cerr << "Cannot open file" << endl;
         return false;
     }
-    //header du cul
+    	//header	
     bool binary = false;
-
-    unsigned int size = points.size()/1000;
 
     file << "P";
     short h = binary ? 6 : 3;
@@ -186,7 +187,7 @@ void maillage_de_ses_morts(){
 	for (int i =0; i<nb_element_y+1; i++){
 
 		vector<pair<float, float>> vec = points_y[i];
-		cout << "vec size : " << vec.size() << endl;
+		//cout << "vec size : " << vec.size() << endl;
 		nb_total_points += vec.size();
 
 		int k = 0;
@@ -195,7 +196,7 @@ void maillage_de_ses_morts(){
 		while(x_max_local < x_max-x_min){
 			x_min_local = k*maille_x, x_max_local = (k+1)*maille_x;
 			int nb_element = 0;
-			float hauteur = 0;
+			float hauteur = h_min;
 			for (unsigned int j = 0; j < vec.size(); j++){
 				
 				pair<float, float> p = vec[j];
@@ -208,23 +209,32 @@ void maillage_de_ses_morts(){
 
 				}
 			}
+
 			k+=1;
 			  // and use it to map the values to colors
-    		auto pix = itadpt::map(val, pal);
+			vector<float> vec_h;
+			vec_h.push_back(hauteur); 
+    		auto pix = itadpt::map(vec_h, pal);
+    		decltype(pix.begin()) it(pix.begin());
 
+			file << *it;
+            file << " ";
+			//cout << "_____hauteur calculée : " << i << " " << x_min_local << " " << hauteur << endl;
 
 		}
-		cout << "_____hauteur calculée : " << i << " " << x_min_local << " " << hauteur << endl;
 
 	}
 	cout << "nombres total de points : " << nb_total_points << endl;
 	cout << x_max << "|" << x_min << "|" << y_max << "|" << x_max << "|" << endl; 
+	file.close();
+	cout << "fin writing" << endl;
 
+	return true;
 }
 
 
 int main(){
-	load_map("map_rascas.txt");
+	load_map("guerledan.txt");
 
 	//calcul moyenne pour avoir la ref #swag
 	double sum_lat, sum_lon;
@@ -261,9 +271,9 @@ int main(){
 		//cout << la << " " << q.first << " " << lo << " " << q.second << " " << endl;
 	}
 
-	maillage_de_ses_morts();
+	maillage_de_ses_morts("map_guerledan_ASCII.ppm", 500);
 
-	write_PPM("map_rascas_ASCII.ppm");
+	//write_PPM("map_rascas_ASCII.ppm");
 
 	return EXIT_SUCCESS;
 }
