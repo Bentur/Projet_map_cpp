@@ -117,7 +117,7 @@ bool write_PPM(const string& filename){
 	return true;
 }
 
-bool maillage_de_ses_morts(const string& filename, int largeur){
+bool maillage_de_ses_morts(const string& filename, int largeur, bool binary){
 
 
 	//on recherche le max et le min sur x et sur y
@@ -163,23 +163,26 @@ bool maillage_de_ses_morts(const string& filename, int largeur){
 
 	//ouverture du fichier pour l'écriture
 	// get a colormap and rescale it
-    auto pal = palettes.at("plasma").rescale(h_min, h_max);
+    auto pal = palettes.at("moreland").rescale(h_min, h_max);
   
     ofstream file(filename,ios::out | ios::binary);
+    cout << "écriture dans le fichier : " << filename << endl;
 
     if (!file) {
         cerr << "Cannot open file" << endl;
         return false;
     }
-    	//header	
-    bool binary = false;
 
+    //header	
     file << "P";
-    short h = binary ? 6 : 3;
+    short h = binary ? 6 : 3; //si écriture binaire, c'est 6, sinon 3
     file << h << "\n";
     file << nb_element_x << " ";
     file << nb_element_y << "\n";
     file << "255" << "\n";
+    
+    using color_type = typename std::iterator_traits<ForwardIterator>::value_type; //utile pour l'écriture binaire
+
 
 	//on parcours notre tableau et on va écrire dans le fichier au fur et à mesure
 	//les valeurs du pixmap
@@ -216,12 +219,24 @@ bool maillage_de_ses_morts(const string& filename, int largeur){
 			vec_h.push_back(hauteur); 
     		auto pix = itadpt::map(vec_h, pal);
     		decltype(pix.begin()) it(pix.begin());
-
-			file << *it;
-            file << " ";
+    		/**
+    		unsigned char r, g, b;
+    		string s = *it;
+    		r = s[0], g = s[1], b = s[2];
+			file << r << g << b;
+			**/
+			if(binary){ //écriture en binaire
+				color_type pix = *it;
+                pix.write(file);
+			}else {
+				file << *it;
+            	file << " ";
+			}
+			
 			//cout << "_____hauteur calculée : " << i << " " << x_min_local << " " << hauteur << endl;
 
 		}
+		file << "\n"; //cette ligne ne semble rien influencer, c'est bizarre, elle me parait pourtant critique ...
 
 	}
 	cout << "nombres total de points : " << nb_total_points << endl;
@@ -233,8 +248,25 @@ bool maillage_de_ses_morts(const string& filename, int largeur){
 }
 
 
-int main(){
-	load_map("guerledan.txt");
+int main(int argc, char* argv[]){
+	//récupération des arguments:
+	string path;
+	int largeur;
+	if(argc != 3){
+		cout << "problème avec les arguments" << endl;
+		cout << "usage : path largeur" << endl;
+		exit(0);
+	}else{
+		path = argv[1];
+		largeur = atoi(argv[2]);
+	}
+	cout << "path : " << path << " | largeur : " << largeur << endl; 
+
+	int b;
+	b = load_map(path);
+	if(b == -1){
+		exit(0);
+	}
 
 	//calcul moyenne pour avoir la ref #swag
 	double sum_lat, sum_lon;
@@ -270,8 +302,9 @@ int main(){
 
 		//cout << la << " " << q.first << " " << lo << " " << q.second << " " << endl;
 	}
+	maillage_de_ses_morts(path.substr(0, path.size()-4) + "_ASCII.ppm", largeur, true);
 
-	maillage_de_ses_morts("map_guerledan_ASCII.ppm", 500);
+	//maillage_de_ses_morts("map_guerledan_ASCII.ppm", 500);
 
 	//write_PPM("map_rascas_ASCII.ppm");
 
