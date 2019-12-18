@@ -7,11 +7,11 @@
 #include <list>
 
 #include <fstream>
-#include "colormap/palettes.hpp"
-#include "colormap/itadpt/map_iterator_adapter.hpp"
+#include "colormap.h"
+//#include "colormap/palettes.hpp"
+//#include "colormap/itadpt/map_iterator_adapter.hpp"
 
 using namespace std;
-using namespace colormap;
 
 float lxref, lyref;
 
@@ -60,6 +60,7 @@ int load_map(const string& file_name){
 	return 1;
 }
 
+/**
 bool write_PPM(const string& filename){
 	// construct val vector
     vector<float> val;
@@ -116,6 +117,7 @@ bool write_PPM(const string& filename){
 	cout << "fin writing" << endl;
 	return true;
 }
+**/
 
 bool maillage_de_ses_morts(const string& filename, int largeur, bool binary){
 
@@ -161,10 +163,7 @@ bool maillage_de_ses_morts(const string& filename, int largeur, bool binary){
 		//cout << "salut, chat va ? " << endl;
 	}
 
-	//ouverture du fichier pour l'écriture
-	// get a colormap and rescale it
-    auto pal = palettes.at("moreland").rescale(h_min, h_max);
-  
+	//ouverture du fichier pour l'écriture  
     ofstream file(filename,ios::out | ios::binary);
     cout << "écriture dans le fichier : " << filename << endl;
 
@@ -177,16 +176,15 @@ bool maillage_de_ses_morts(const string& filename, int largeur, bool binary){
     file << "P";
     short h = binary ? 6 : 3; //si écriture binaire, c'est 6, sinon 3
     file << h << "\n";
-    file << nb_element_x << " ";
-    file << nb_element_y << "\n";
+    file << nb_element_x+1 << " ";
+    file << nb_element_y+1 << "\n";
     file << "255" << "\n";
     
-    using color_type = typename std::iterator_traits<ForwardIterator>::value_type; //utile pour l'écriture binaire
-
 
 	//on parcours notre tableau et on va écrire dans le fichier au fur et à mesure
 	//les valeurs du pixmap
 	unsigned int nb_total_points = 0;
+	Colormap colormap = Colormap();
 	for (int i =0; i<nb_element_y+1; i++){
 
 		vector<pair<float, float>> vec = points_y[i];
@@ -214,29 +212,28 @@ bool maillage_de_ses_morts(const string& filename, int largeur, bool binary){
 			}
 
 			k+=1;
-			  // and use it to map the values to colors
-			vector<float> vec_h;
-			vec_h.push_back(hauteur); 
-    		auto pix = itadpt::map(vec_h, pal);
-    		decltype(pix.begin()) it(pix.begin());
-    		/**
-    		unsigned char r, g, b;
-    		string s = *it;
-    		r = s[0], g = s[1], b = s[2];
-			file << r << g << b;
-			**/
+			
+			//colormap
+			float h = (hauteur-h_min)/(h_max-h_min);
+			int r, g, b;
+		
+			//colormap.getGreyColor(h, r, g, b);
+			colormap.getColor(h, r, g, b);
+			cout << r << " " << g << " " << b << " " << endl;
+		
 			if(binary){ //écriture en binaire
-				color_type pix = *it;
-                pix.write(file);
+
 			}else {
-				file << *it;
-            	file << " ";
+				
+
+				file << r << " " << g << " " << b << "  ";
+
 			}
 			
 			//cout << "_____hauteur calculée : " << i << " " << x_min_local << " " << hauteur << endl;
 
 		}
-		file << "\n"; //cette ligne ne semble rien influencer, c'est bizarre, elle me parait pourtant critique ...
+		file << "\n";
 
 	}
 	cout << "nombres total de points : " << nb_total_points << endl;
@@ -302,7 +299,7 @@ int main(int argc, char* argv[]){
 
 		//cout << la << " " << q.first << " " << lo << " " << q.second << " " << endl;
 	}
-	maillage_de_ses_morts(path.substr(0, path.size()-4) + "_ASCII.ppm", largeur, true);
+	maillage_de_ses_morts(path.substr(0, path.size()-4) + "_ASCII.ppm", largeur, false);
 
 	//maillage_de_ses_morts("map_guerledan_ASCII.ppm", 500);
 
