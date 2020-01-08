@@ -28,7 +28,7 @@ void Colormap::getColor(float h, int& r, int& g, int& b){
 		g = c[i][1] +  (c[i+1][1]-c[i][1])*h;
 		b = c[i][2] +  (c[i+1][2]-c[i][2])*h;
 	
-		cout << h << " " << i << " " << r << " " << g << " " << b << " " << endl;
+		//cout << h << " " << i << " " << r << " " << g << " " << b << " " << endl;
 
 	}
 
@@ -45,7 +45,7 @@ void Colormap::getGreyColor(float h, int& r, int& g, int& b){
 	g = 255 - (int)255*h;
 	b = 255 - (int)255*h;
 
-	cout << h << " " << r << " " << g << " " << b << " " << endl;
+	//cout << h << " " << r << " " << g << " " << b << " " << endl;
 
 
 }

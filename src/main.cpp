@@ -138,9 +138,9 @@ bool maillage_de_ses_morts(const string& filename, int largeur, bool binary){
 	cout << x_max << "|" << x_min << "|" << y_max << "|" << y_min << "|" << endl; 
 
 	//on en déduit le nombre d'éléments selon x et selon y
-	const int nb_element_x = largeur;
-	//const int nb_element_y = (int)largeur*(y_max-y_min)/(x_max-x_min);
-	const int nb_element_y = largeur*1.1;
+	//le 1 est rajouté plus loin
+	const int nb_element_y = largeur*1.1-1;
+	const int nb_element_x = largeur-1;
 
 	float maille_x = (x_max-x_min)/nb_element_x; //il n'y a que maille qui m'aie
 	float maille_y = (y_max-y_min)/nb_element_y; //il n'y a que m'ail qui male
@@ -219,10 +219,10 @@ bool maillage_de_ses_morts(const string& filename, int largeur, bool binary){
 		
 			//colormap.getGreyColor(h, r, g, b);
 			colormap.getColor(h, r, g, b);
-			cout << r << " " << g << " " << b << " " << endl;
+			//cout << r << " " << g << " " << b << " " << endl;
 		
 			if(binary){ //écriture en binaire
-
+				
 			}else {
 				
 
@@ -285,8 +285,8 @@ int main(int argc, char* argv[]){
 	lyref = sum_lon/(float)points.size();
 
 	cout << points.size() << endl;
-	cout<<lxref<<endl;
-	cout<<lyref<<endl;
+	cout<< "lxref : " << lxref<<endl;
+	cout<< "lyref : " << lyref<<endl;
 
 	pair<float, float> q;
 	for (auto i = points.begin(); i != points.end(); ++i){
